@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'slack-clone-backend'
+    static_configs:
+      - targets: ['host.docker.internal:3001']  # Mac/Windows
+        # Para Linux usa: ['172.17.0.1:3001']
+        labels:
+          service: 'slack-clone-backend'
+          environment: 'development'
