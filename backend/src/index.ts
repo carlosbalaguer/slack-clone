@@ -10,7 +10,7 @@ const start = async () => {
       host: '0.0.0.0'
     });
     
-    console.log('🚀 Fastify server running on http://localhost:3001');
+    console.log(`🚀 Fastify server running on http://localhost:${process.env.PORT || 3001}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);

@@ -8,8 +8,8 @@ import { Server } from "socket.io";
 import {
 	createRequestLogger,
 	logger,
-	sentry,
 	metrics,
+	sentry,
 } from "./observability/index.js";
 
 // Plugins
@@ -18,10 +18,10 @@ import { redisPlugin } from "./plugins/redis.js";
 import { workosAuthPlugin } from "./plugins/workos-auth.js";
 
 // Routes
-import { authRoutes } from "./routes/auth.js";
-import { channelsRoutes } from "./routes/channels.js";
-import { messagesRoutes } from "./routes/messages.js";
-import { usersRoutes } from "./routes/users.js";
+import { authRoutes } from "./routes/auth.routes.js";
+import { channelsRoutes } from "./routes/channels.routes.js";
+import { messagesRoutes } from "./routes/messages.routes.js";
+import { usersRoutes } from "./routes/users.routes.js";
 
 // WebSocket
 import { SpanStatusCode, trace } from "@opentelemetry/api";

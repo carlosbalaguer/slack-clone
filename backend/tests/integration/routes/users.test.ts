@@ -242,7 +242,7 @@ describe("Users Routes - Integration", () => {
 
 			expect(response.statusCode).toBe(400);
 			expect(response.json()).toEqual({
-				error: "Invalid status. Must be: online, away, busy, or offline",
+				error: "Invalid status",
 			});
 		});
 

@@ -1,11 +1,12 @@
 import type { FastifyInstance } from "fastify";
+import { ZodError } from "zod";
 import {
 	magicLinkSchema,
 	refreshTokenSchema,
 	verifyMagicLinkSchema,
 } from "../schemas/auth.schema.js";
+import { userService } from "../services/user.service.js";
 import { getAuthUserId } from "../utils/auth.js";
-import { ZodError } from "zod";
 
 export async function authRoutes(fastify: FastifyInstance) {
 	// Send magic link
@@ -30,43 +31,27 @@ export async function authRoutes(fastify: FastifyInstance) {
 	fastify.post("/verify", async (request, reply) => {
 		try {
 			const { email, code } = verifyMagicLinkSchema.parse(request.body);
-			console.log("Verifying magic link for:", email, "with code:", code);
 
-			const { user, accessToken, refreshToken } =
-				await fastify.workos.userManagement.authenticateWithMagicAuth({
-					email,
-					code,
-					clientId: process.env.WORKOS_CLIENT_ID!,
-				});
+			const {
+				user: workosUser,
+				accessToken,
+				refreshToken,
+			} = await fastify.workos.userManagement.authenticateWithMagicAuth({
+				email,
+				code,
+				clientId: process.env.WORKOS_CLIENT_ID!,
+			});
 
-			// Find or create user in DB
-			let dbUser = await fastify.supabase
-				.from("users")
-				.select("*")
-				.eq("workos_id", user.id)
-				.single();
-
-			if (!dbUser.data) {
-				const { data: newUser } = await fastify.supabase
-					.from("users")
-					.insert({
-						workos_id: user.id,
-						email: user.email,
-						username: user.email.split("@")[0],
-						display_name:
-							`${user.firstName || ""} ${
-								user.lastName || ""
-							}`.trim() || user.email.split("@")[0],
-						avatar_url: user.profilePictureUrl,
-					})
-					.select()
-					.single();
-
-				dbUser.data = newUser;
-			}
+			const dbUser = await userService.findOrCreate(fastify, {
+				workosId: workosUser.id,
+				email: workosUser.email,
+				firstName: workosUser.firstName || undefined,
+				lastName: workosUser.lastName || undefined,
+				profilePictureUrl: workosUser.profilePictureUrl || undefined,
+			});
 
 			return {
-				user: dbUser.data,
+				user: dbUser,
 				accessToken,
 				refreshToken,
 			};
@@ -88,7 +73,6 @@ export async function authRoutes(fastify: FastifyInstance) {
 		try {
 			const { refreshToken } = refreshTokenSchema.parse(request.body);
 
-			// Authenticate with refresh token
 			const response =
 				await fastify.workos.userManagement.authenticateWithRefreshToken(
 					{
@@ -97,7 +81,6 @@ export async function authRoutes(fastify: FastifyInstance) {
 					}
 				);
 
-			// WorkOS retorna nuevos tokens
 			return {
 				accessToken: response.accessToken,
 				refreshToken: response.refreshToken,
@@ -119,27 +102,14 @@ export async function authRoutes(fastify: FastifyInstance) {
 	// Get current user
 	fastify.get(
 		"/me",
-		{
-			onRequest: [fastify.authenticate],
-		},
+		{ onRequest: [fastify.authenticate] },
 		async (request, reply) => {
-			try {
-				const userId = getAuthUserId(request);
+			const userId = getAuthUserId(request);
+			const user = await userService.findByWorkosId(fastify, userId);
 
-				const { data: user } = await fastify.supabase
-					.from("users")
-					.select("*")
-					.eq("workos_id", userId)
-					.single();
-
-				if (!user) {
-					return reply.status(404).send({ error: "User not found" });
-				}
-
-				return { user };
-			} catch (err) {
-				return reply.status(401).send({ error: "Unauthorized" });
-			}
+			if (!user)
+				return reply.status(404).send({ error: "User not found" });
+			return { user };
 		}
 	);
 }

@@ -193,7 +193,7 @@ describe("Channels Routes - Integration", () => {
 			});
 
 			expect(response.statusCode).toBe(400);
-			expect(response.json()).toEqual({ error: "Database error" });
+			expect(response.json()).toEqual({ error: "Failed to create channel" });
 
 			// Restore
 			appAny.supabase.from = originalFrom;
