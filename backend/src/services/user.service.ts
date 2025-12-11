@@ -1,4 +1,10 @@
 import type { FastifyInstance } from "fastify";
+import {
+	toUserDTO,
+	toUserListDTO,
+	type UserDTO,
+	type UserListDTO,
+} from "../types/dtos/user.dto.js";
 
 interface CreateUserParams {
 	workosId: string;
@@ -10,29 +16,36 @@ interface CreateUserParams {
 
 interface UpdateUserParams {
 	workosId: string;
-	display_name?: string;
-	avatar_url?: string;
-	status?: string;
+	display_name?: string | undefined;
+	avatar_url?: string | undefined;
+	status?: string | undefined;
 }
 
 export const userService = {
 	/**
 	 * Busca un usuario por su WorkOS ID.
 	 */
-	async findByWorkosId(app: FastifyInstance, workosId: string) {
+	async findByWorkosId(
+		app: FastifyInstance,
+		workosId: string
+	): Promise<UserDTO | null> {
 		const { data: user } = await app.supabase
 			.from("users")
 			.select("*")
 			.eq("workos_id", workosId)
 			.single();
-		return user;
+
+		return user ? toUserDTO(user) : null;
 	},
 
 	/**
 	 * Busca un usuario o lo crea si no existe.
 	 * Maneja la generación segura de usernames para evitar colisiones.
 	 */
-	async findOrCreate(app: FastifyInstance, params: CreateUserParams) {
+	async findOrCreate(
+		app: FastifyInstance,
+		params: CreateUserParams
+	): Promise<UserDTO> {
 		const { workosId, email, firstName, lastName, profilePictureUrl } =
 			params;
 
@@ -47,9 +60,7 @@ export const userService = {
 			.replace(/[^a-z0-9]/g, "");
 		let username = baseUsername;
 
-		// 3. Lógica "Staff": Garantizar unicidad (intento simple)
-		// En un sistema real masivo, esto se haría con una secuencia o un servicio de IDs,
-		// pero para empezar, probamos si existe.
+		// 3. Garantizar unicidad
 		const { data: collision } = await app.supabase
 			.from("users")
 			.select("id")
@@ -57,7 +68,6 @@ export const userService = {
 			.maybeSingle();
 
 		if (collision) {
-			// Si "juan" existe, probamos "juan" + timestamp corto
 			username = `${baseUsername}${Math.floor(Date.now() / 1000)
 				.toString()
 				.slice(-4)}`;
@@ -79,13 +89,17 @@ export const userService = {
 			.single();
 
 		if (error) throw error;
-		return newUser;
+
+		return toUserDTO(newUser);
 	},
 
 	/**
 	 * Actualiza el perfil o estado del usuario.
 	 */
-	async update(app: FastifyInstance, params: UpdateUserParams) {
+	async update(
+		app: FastifyInstance,
+		params: UpdateUserParams
+	): Promise<UserDTO> {
 		const { workosId, ...updates } = params;
 
 		const { data: user, error } = await app.supabase
@@ -99,13 +113,18 @@ export const userService = {
 			.single();
 
 		if (error) throw error;
-		return user;
+
+		return toUserDTO(user);
 	},
 
 	/**
 	 * Listar usuarios con paginación (Staff Level).
 	 */
-	async list(app: FastifyInstance, page: number = 1, limit: number = 20) {
+	async list(
+		app: FastifyInstance,
+		page: number = 1,
+		limit: number = 20
+	): Promise<UserListDTO> {
 		const from = (page - 1) * limit;
 		const to = from + limit - 1;
 
@@ -117,13 +136,13 @@ export const userService = {
 			.order("username", { ascending: true })
 			.range(from, to);
 
-		return { users: users || [], total: count };
+		return toUserListDTO(users || [], count || 0, page, limit);
 	},
 
 	/**
 	 * Busca un usuario por su ID interno (UUID)
 	 */
-	async findById(app: FastifyInstance, id: string) {
+	async findById(app: FastifyInstance, id: string): Promise<UserDTO | null> {
 		const { data: user } = await app.supabase
 			.from("users")
 			.select(
@@ -132,6 +151,6 @@ export const userService = {
 			.eq("id", id)
 			.single();
 
-		return user;
+		return user ? toUserDTO(user) : null;
 	},
 };

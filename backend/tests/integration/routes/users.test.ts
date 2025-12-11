@@ -37,7 +37,7 @@ describe("Users Routes - Integration", () => {
 		otherUserWorkosId = other.workos_id;
 		otherUserId = other.id;
 
-		// ⭐ Configurar mock auth con el test user principal
+		// Configurar mock auth con el test user principal
 		appAny.setMockUserId(testUserWorkosId);
 	});
 
@@ -73,17 +73,16 @@ describe("Users Routes - Integration", () => {
 			const body = response.json();
 			expect(body).toHaveProperty("users");
 			expect(Array.isArray(body.users)).toBe(true);
-			expect(body.users.length).toBeGreaterThanOrEqual(2); // Al menos nuestros 2 test users
+			expect(body.users.length).toBeGreaterThanOrEqual(2);
 
-			// Verificar que retorna los campos correctos
 			const user = body.users[0];
 			expect(user).toHaveProperty("id");
 			expect(user).toHaveProperty("username");
-			expect(user).toHaveProperty("display_name");
-			expect(user).toHaveProperty("avatar_url");
+			expect(user).toHaveProperty("displayName");
+			expect(user).toHaveProperty("avatarUrl");
 			expect(user).toHaveProperty("status");
 
-			// No debe retornar campos sensibles
+			expect(user).not.toHaveProperty("workosId");
 			expect(user).not.toHaveProperty("workos_id");
 			expect(user).not.toHaveProperty("email");
 		});
@@ -102,8 +101,6 @@ describe("Users Routes - Integration", () => {
 				},
 			});
 
-			// Mock auth autentica pero user no existe → debería retornar 404 o similar
-			// Si no hay check, retorna 200 con data (comportamiento actual)
 			expect(response.statusCode).toBe(200);
 
 			// Restaurar mock auth
@@ -127,8 +124,8 @@ describe("Users Routes - Integration", () => {
 			expect(body).toHaveProperty("user");
 			expect(body.user.id).toBe(otherUserId);
 			expect(body.user).toHaveProperty("username");
-			expect(body.user).toHaveProperty("display_name");
-			expect(body.user).toHaveProperty("created_at");
+			expect(body.user).toHaveProperty("displayName");
+			expect(body.user).toHaveProperty("createdAt");
 		});
 
 		it("should return 404 for non-existent user", async () => {
@@ -155,7 +152,6 @@ describe("Users Routes - Integration", () => {
 				},
 			});
 
-			// Supabase rechaza UUIDs inválidos
 			expect(response.statusCode).toBe(404);
 		});
 	});
@@ -277,7 +273,7 @@ describe("Users Routes - Integration", () => {
 
 			const body = response.json();
 			expect(body).toHaveProperty("user");
-			expect(body.user.display_name).toBe("Updated Display Name");
+			expect(body.user.displayName).toBe("Updated Display Name");
 		});
 
 		it("should update avatar_url", async () => {
@@ -293,7 +289,7 @@ describe("Users Routes - Integration", () => {
 			});
 
 			expect(response.statusCode).toBe(200);
-			expect(response.json().user.avatar_url).toBe(
+			expect(response.json().user.avatarUrl).toBe(
 				"https://example.com/avatar.jpg"
 			);
 		});
@@ -314,8 +310,8 @@ describe("Users Routes - Integration", () => {
 			expect(response.statusCode).toBe(200);
 
 			const body = response.json();
-			expect(body.user.display_name).toBe("New Name");
-			expect(body.user.avatar_url).toBe(
+			expect(body.user.displayName).toBe("New Name");
+			expect(body.user.avatarUrl).toBe(
 				"https://example.com/new-avatar.jpg"
 			);
 		});
@@ -330,7 +326,6 @@ describe("Users Routes - Integration", () => {
 				payload: {},
 			});
 
-			// Sin cambios, solo actualiza updated_at
 			expect(response.statusCode).toBe(200);
 			expect(response.json()).toHaveProperty("user");
 		});
@@ -348,7 +343,7 @@ describe("Users Routes - Integration", () => {
 			});
 
 			expect(response.statusCode).toBe(200);
-			expect(response.json().user.avatar_url).toBeNull();
+			expect(response.json().user.avatarUrl).toBeNull();
 		});
 	});
 });
