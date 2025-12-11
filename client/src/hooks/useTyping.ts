@@ -8,7 +8,7 @@ export function useTyping(channelId: string | null) {
 	useEffect(() => {
 		if (!socket || !channelId) return;
 
-		socket.on("user-typing", ({ username }: { username: string }) => {
+		socket.on("user_typing", ({ username }: { username: string }) => {
 			setTypingUsers((prev) => {
 				if (!prev.includes(username)) {
 					return [...prev, username];
@@ -24,20 +24,20 @@ export function useTyping(channelId: string | null) {
 			}, 3000);
 		});
 
-		socket.on("user-stopped-typing", ({ userId }: { userId: string }) => {
+		socket.on("user_stopped_typing", ({ userId }: { userId: string }) => {
 			// Would need to track userId -> username mapping
 		});
 
 		return () => {
-			socket.off("user-typing");
-			socket.off("user-stopped-typing");
+			socket.off("user_typing");
+			socket.off("user_stopped_typing");
 		};
 	}, [socket, channelId]);
 
 	const startTyping = () => {
 		if (!channelId) return;
 
-		socket?.emit("typing-start", { channelId });
+		socket?.emit("typing_start", { channelId });
 
 		// Clear previous timeout
 		if (typingTimeoutRef.current) {
@@ -46,7 +46,7 @@ export function useTyping(channelId: string | null) {
 
 		// Auto-stop after 3 seconds
 		typingTimeoutRef.current = setTimeout(() => {
-			socket?.emit("typing-stop", { channelId });
+			socket?.emit("typing_stop", { channelId });
 		}, 3000);
 	};
 

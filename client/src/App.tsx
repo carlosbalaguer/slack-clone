@@ -30,22 +30,22 @@ function AppContent() {
 	useEffect(() => {
 		if (!socket) return;
 
-		socket.on("users-update", (updatedUsers: User[]) => {
+		socket.on("users_update", (updatedUsers: User[]) => {
 			setUsers(updatedUsers);
 		});
 
-		socket.on("user-joined-channel", ({ username }: any) => {
+		socket.on("user_joined_channel", ({ username }: any) => {
 			console.log(`${username} joined the channel`);
 		});
 
-		socket.on("user-left-channel", ({ username }: any) => {
+		socket.on("user_left_channel", ({ username }: any) => {
 			console.log(`${username} left the channel`);
 		});
 
 		return () => {
-			socket.off("users-update");
-			socket.off("user-joined-channel");
-			socket.off("user-left-channel");
+			socket.off("users_update");
+			socket.off("user_joined_channel");
+			socket.off("user_left_channel");
 		};
 	}, [socket]);
 
@@ -56,7 +56,7 @@ function AppContent() {
 	};
 
 	const joinChannel = (channelId: string) => {
-		socket?.emit("join-channel", { channelId }, (response: any) => {
+		socket?.emit("join_channel", { channelId }, (response: any) => {
 			if (response.success) {
 				setCurrentChannel(channelId);
 				setCurrentChannelName(channelId);

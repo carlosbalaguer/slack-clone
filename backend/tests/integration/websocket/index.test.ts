@@ -44,25 +44,25 @@ describe("WebSocket Integration", () => {
 			.select()
 			.single();
 		testChannelId = channel!.id;
-	});
+	}, 30000);
 
 	afterAll(async () => {
-		// ⭐ 3. Desconectar todo antes de cerrar la app
+		// Desconectar sockets clientes
 		for (const socket of activeSockets) {
 			if (socket.connected) {
 				socket.disconnect();
 			}
 		}
-		activeSockets = []; // limpiar array
+		activeSockets = [];
 
-		// Dar un pequeño respiro al event loop
-		await new Promise((resolve) => setTimeout(resolve, 50));
+		// Esperar a que los sockets se cierren
+		await new Promise((resolve) => setTimeout(resolve, 100));
 
 		await closeTestApp(app);
-	}, 20000);
+	}, 30000);
 
 	// ========================================
-	// Authentication Tests (temporary clients)
+	// Authentication Tests
 	// ========================================
 	describe("Authentication", () => {
 		it("should reject connection without token", async () => {
@@ -92,7 +92,7 @@ describe("WebSocket Integration", () => {
 		});
 
 		it("should reject connection with invalid token", async () => {
-			const address = await app.server.address();
+			const address = app.server.address();
 			if (!address || typeof address !== "object") {
 				throw new Error("Server not listening");
 			}
@@ -119,15 +119,13 @@ describe("WebSocket Integration", () => {
 
 		it("should accept connection with valid token", async () => {
 			const client = await createTrackedClient(testUserId);
-
 			expect(client.connected).toBe(true);
-
 			client.disconnect();
 		});
 	});
 
 	// ========================================
-	// Channel Operations (shared client)
+	// Channel Operations
 	// ========================================
 	describe("Channel Operations", () => {
 		let client: ClientSocket;
@@ -143,18 +141,17 @@ describe("WebSocket Integration", () => {
 		});
 
 		it("should allow joining a channel", async () => {
-			client.emit("join-channel", testChannelId);
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			client.emit("join_channel", testChannelId);
+			// Esperamos un poco porque ahora join consulta DB
+			await new Promise((resolve) => setTimeout(resolve, 200));
 			expect(client.connected).toBe(true);
 		});
 
 		it("should allow leaving a channel", async () => {
-			// First join
-			client.emit("join-channel", testChannelId);
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			client.emit("join_channel", testChannelId);
+			await new Promise((resolve) => setTimeout(resolve, 200));
 
-			// Then leave
-			client.emit("leave-channel", testChannelId);
+			client.emit("leave_channel", testChannelId);
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			expect(client.connected).toBe(true);
@@ -162,7 +159,7 @@ describe("WebSocket Integration", () => {
 	});
 
 	// ========================================
-	// Message Broadcasting (shared clients)
+	// Message Broadcasting
 	// ========================================
 	describe("Message Broadcasting", () => {
 		let client1: ClientSocket;
@@ -170,7 +167,6 @@ describe("WebSocket Integration", () => {
 		let user2Id: string;
 
 		beforeAll(async () => {
-			// Create second user
 			const testUser2 = createTestUser();
 			const { data: user2 } = await app.supabase
 				.from("users")
@@ -179,16 +175,14 @@ describe("WebSocket Integration", () => {
 				.single();
 			user2Id = user2!.id;
 
-			// Connect both clients ONCE
 			client1 = await createTestWebSocketClient(app, testUserId);
 			client2 = await createTestWebSocketClient(app, user2Id);
 
-			// Both join the same channel
-			client1.emit("join-channel", testChannelId);
-			client2.emit("join-channel", testChannelId);
+			client1.emit("join_channel", testChannelId);
+			client2.emit("join_channel", testChannelId);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
-		});
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+		}, 30000);
 
 		afterAll(() => {
 			if (client1?.connected) client1.disconnect();
@@ -196,26 +190,26 @@ describe("WebSocket Integration", () => {
 		});
 
 		it("should broadcast new message to channel members", async () => {
-			const testMessage = {
-				id: "msg-123",
-				channel_id: testChannelId,
-				user_id: testUserId,
+			const messagePayload = {
+				channelId: testChannelId,
 				content: "Hello everyone!",
-				created_at: new Date().toISOString(),
 			};
 
-			const messagePromise = waitForEvent(client2, "message");
-			client1.emit("new-message", testMessage);
+			const messagePromise = waitForEvent(client2, "new_message");
+
+			client1.emit("send_message", messagePayload);
 
 			const receivedMessage = await messagePromise;
+
 			expect(receivedMessage).toMatchObject({
-				id: "msg-123",
 				content: "Hello everyone!",
+				channel_id: testChannelId,
+				user_id: testUserId,
 			});
+			expect(receivedMessage).toHaveProperty("id");
 		});
 
 		it("should not broadcast message to users not in channel", async () => {
-			// Create third user
 			const testUser3 = createTestUser();
 			const { data: user3 } = await app.supabase
 				.from("users")
@@ -224,32 +218,29 @@ describe("WebSocket Integration", () => {
 				.single();
 
 			const client3 = await createTestWebSocketClient(app, user3!.id);
-			// Note: client3 does NOT join the channel
+			// client3 NO se une al canal
 
-			const testMessage = {
-				id: "msg-456",
-				channel_id: testChannelId,
-				user_id: testUserId,
+			const messagePayload = {
+				channelId: testChannelId,
 				content: "Secret message",
-				created_at: new Date().toISOString(),
 			};
 
 			let received = false;
-			client3.on("message", () => {
+			client3.on("new_message", () => {
 				received = true;
 			});
 
-			client1.emit("new-message", testMessage);
-			await new Promise((resolve) => setTimeout(resolve, 200));
+			client1.emit("send_message", messagePayload);
+
+			await new Promise((resolve) => setTimeout(resolve, 500));
 
 			expect(received).toBe(false);
-
 			client3.disconnect();
 		});
 	});
 
 	// ========================================
-	// Typing Indicators (shared clients)
+	// Typing Indicators
 	// ========================================
 	describe("Typing Indicators", () => {
 		let client1: ClientSocket;
@@ -268,50 +259,50 @@ describe("WebSocket Integration", () => {
 			client1 = await createTestWebSocketClient(app, testUserId);
 			client2 = await createTestWebSocketClient(app, user2Id);
 
-			client1.emit("join-channel", testChannelId);
-			client2.emit("join-channel", testChannelId);
+			client1.emit("join_channel", testChannelId);
+			client2.emit("join_channel", testChannelId);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
-		});
+			await new Promise((resolve) => setTimeout(resolve, 2000));
+		}, 30000);
 
 		afterAll(() => {
 			if (client1?.connected) client1.disconnect();
 			if (client2?.connected) client2.disconnect();
 		});
 
-		it("should broadcast typing-start event", async () => {
-			const typingPromise = waitForEvent(client2, "user-typing");
+		it("should broadcast typing_start event", async () => {
+			const typingPromise = waitForEvent(client2, "user_typing");
 
-			client1.emit("typing-start", { channelId: testChannelId });
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			client1.emit("typing_start", { channelId: testChannelId });
 
 			const typingData = await typingPromise;
+
 			expect(typingData).toHaveProperty("userId");
 			expect(typingData).toHaveProperty("username");
-		});
+		}, 10000);
 
-		it("should broadcast typing-stop event", async () => {
-			const stoppedPromise = waitForEvent(client2, "user-stopped-typing");
+		it("should broadcast typing_stop event", async () => {
+			const stoppedPromise = waitForEvent(client2, "user_stopped_typing");
 
-			client1.emit("typing-stop", { channelId: testChannelId });
+			client1.emit("typing_stop", { channelId: testChannelId });
 
 			const stoppedData = await stoppedPromise;
 			expect(stoppedData).toHaveProperty("userId");
-		});
+		}, 10000);
 	});
 
 	// ========================================
-	// Disconnect (single client)
+	// Disconnect
 	// ========================================
 	describe("Disconnect", () => {
 		it("should handle client disconnect gracefully", async () => {
 			const client = await createTestWebSocketClient(app, testUserId);
-
 			expect(client.connected).toBe(true);
 
 			client.disconnect();
-
-			// Wait a bit for disconnect to process
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 200));
 
 			expect(client.connected).toBe(false);
 		});

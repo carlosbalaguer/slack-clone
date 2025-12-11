@@ -1,15 +1,37 @@
-import { WorkOS } from "@workos-inc/node";
 import type { FastifyInstance } from "fastify";
 import type { Server, Socket } from "socket.io";
+import { channelService } from "../services/channel.service.js";
+import { messageService } from "../services/message.service.js";
+import { userService } from "../services/user.service.js";
 
-const workos = new WorkOS(process.env.WORKOS_API_KEY);
+interface ServerToClientEvents {
+	new_message: (message: any) => void;
+	user_typing: (data: { userId: string; username: string }) => void;
+	user_stopped_typing: (data: { userId: string }) => void;
+	error: (error: { message: string }) => void;
+}
+
+interface ClientToServerEvents {
+	join_channel: (channelId: string) => void;
+	leave_channel: (channelId: string) => void;
+	send_message: (
+		data: { channelId: string; content: string },
+		callback?: (response: any) => void
+	) => void;
+	typing_start: (data: { channelId: string }) => void;
+	typing_stop: (data: { channelId: string }) => void;
+}
 
 interface SocketData {
 	userId: string;
 	username: string;
+	workosId: string;
 }
 
-export function setupWebSocket(io: Server, fastify: FastifyInstance) {
+export function setupWebSocket(
+	io: Server<ClientToServerEvents, ServerToClientEvents>,
+	fastify: FastifyInstance
+) {
 	// Auth middleware
 	io.use(async (socket, next) => {
 		const token = socket.handshake.auth.token;
@@ -21,18 +43,17 @@ export function setupWebSocket(io: Server, fastify: FastifyInstance) {
 		try {
 			const workos = (fastify as any).workos;
 
-			const user = await workos.userManagement.getUser(token);
+			const workosUser = await workos.userManagement.getUser(token);
 
-			if (!user) {
+			if (!workosUser) {
 				return next(new Error("Invalid token"));
 			}
 
 			// Get user from DB
-			const { data: dbUser } = await fastify.supabase
-				.from("users")
-				.select("*")
-				.eq("workos_id", user.id)
-				.single();
+			const dbUser = await userService.findByWorkosId(
+				fastify,
+				workosUser.id
+			);
 
 			if (!dbUser) {
 				return next(new Error("User not found"));
@@ -41,54 +62,92 @@ export function setupWebSocket(io: Server, fastify: FastifyInstance) {
 			socket.data = {
 				userId: dbUser.id,
 				username: dbUser.username,
+				workosId: workosUser.id,
 			} as SocketData;
 
 			next();
 		} catch (err) {
+			fastify.log.error({ err }, "WebSocket Auth Error");
 			next(new Error("Authentication failed"));
 		}
 	});
 
 	io.on("connection", (socket: Socket) => {
-		const data = socket.data as SocketData;
-
-		console.log(`✅ User connected: ${data.username} (${socket.id})`);
-
+		const { username, userId, workosId } = socket.data as SocketData;
+		fastify.log.info(`✅ WS User connected: ${username} (${socket.id})`);
 		// Join channel
-		socket.on("join-channel", (channelId: string) => {
-			socket.join(`channel:${channelId}`);
-			console.log(`${data.username} joined channel: ${channelId}`);
+		socket.on("join_channel", async (channelId) => {
+			try {
+				const channel = await channelService.findById(
+					fastify,
+					channelId
+				);
+
+				if (!channel) {
+					socket.emit("error", { message: "Channel does not exist" });
+					return;
+				}
+
+				const roomName = `channel:${channelId}`;
+				socket.join(roomName);
+				fastify.log.debug(`Socket ${username} joined ${roomName}`);
+			} catch (err) {
+				fastify.log.error({ err }, "Error joining channel");
+			}
 		});
 
 		// Leave channel
-		socket.on("leave-channel", (channelId: string) => {
-			socket.leave(`channel:${channelId}`);
-			console.log(`${data.username} left channel: ${channelId}`);
+		socket.on("leave_channel", (channelId) => {
+			const roomName = `channel:${channelId}`;
+			socket.leave(roomName);
+			fastify.log.debug(`${username} left channel: ${channelId}`);
 		});
 
 		// New message
-		socket.on("new-message", async (message) => {
-			// Broadcast to channel
-			io.to(`channel:${message.channel_id}`).emit("message", message);
+		socket.on("send_message", async ({ channelId, content }, callback) => {
+			try {
+				const message = await messageService.create(fastify, {
+					content,
+					channelId,
+					workosUserId: workosId,
+				});
+
+				io.to(`channel:${channelId}`).emit("new_message", message);
+
+				if (callback) {
+					callback({ status: "ok", data: message });
+				}
+			} catch (err: any) {
+				fastify.log.error({ err }, "WS Message Error");
+
+				socket.emit("error", { message: "Failed to send message" });
+
+				if (callback) {
+					callback({
+						status: "error",
+						error: "Failed to save message",
+					});
+				}
+			}
 		});
 
 		// Typing indicator
-		socket.on("typing-start", ({ channelId }) => {
-			socket.to(`channel:${channelId}`).emit("user-typing", {
-				userId: data.userId,
-				username: data.username,
+		socket.on("typing_start", ({ channelId }) => {
+			socket.to(`channel:${channelId}`).emit("user_typing", {
+				userId: userId,
+				username: username,
 			});
 		});
 
-		socket.on("typing-stop", ({ channelId }) => {
-			socket.to(`channel:${channelId}`).emit("user-stopped-typing", {
-				userId: data.userId,
+		socket.on("typing_stop", ({ channelId }) => {
+			socket.to(`channel:${channelId}`).emit("user_stopped_typing", {
+				userId: userId,
 			});
 		});
 
 		// Disconnect
 		socket.on("disconnect", () => {
-			console.log(`❌ User disconnected: ${data.username}`);
+			fastify.log.debug(`User disconnected: ${username}`);
 		});
 	});
 }

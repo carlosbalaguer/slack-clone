@@ -9,24 +9,24 @@ export function useChannels() {
 	useEffect(() => {
 		if (!socket) return;
 
-		socket.on("channels-update", (updatedChannels: Channel[]) => {
+		socket.on("channels_update", (updatedChannels: Channel[]) => {
 			setChannels(updatedChannels);
 		});
 
-		socket.on("channel-created", (channel: Channel) => {
+		socket.on("channel_created", (channel: Channel) => {
 			console.log("New channel created:", channel.name);
 		});
 
 		return () => {
-			socket.off("channels-update");
-			socket.off("channel-created");
+			socket.off("channels_update");
+			socket.off("channel_created");
 		};
 	}, [socket]);
 
 	const createChannel = (name: string, description: string) => {
 		return new Promise((resolve, reject) => {
 			socket?.emit(
-				"create-channel",
+				"create_channel",
 				{ name, description },
 				(response: any) => {
 					if (response.success) {

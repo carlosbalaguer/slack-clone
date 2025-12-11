@@ -10,7 +10,7 @@ export function useMessages(channelId: string | null) {
 		if (!socket || !channelId) return;
 
 		socket.on(
-			"new-message",
+			"new_message",
 			({ channelId: msgChannelId, message }: any) => {
 				if (msgChannelId === channelId) {
 					setMessages((prev) => [...prev, message]);
@@ -18,7 +18,7 @@ export function useMessages(channelId: string | null) {
 			}
 		);
 
-		socket.on("reaction-added", ({ messageId, emoji, userId }: any) => {
+		socket.on("reaction_added", ({ messageId, emoji, userId }: any) => {
 			setMessages((prev) =>
 				prev.map((msg) => {
 					if (msg.id === messageId) {
@@ -36,7 +36,7 @@ export function useMessages(channelId: string | null) {
 			);
 		});
 
-		socket.on("reaction-removed", ({ messageId, emoji, userId }: any) => {
+		socket.on("reaction_removed", ({ messageId, emoji, userId }: any) => {
 			setMessages((prev) =>
 				prev.map((msg) => {
 					if (msg.id === messageId) {
@@ -56,7 +56,7 @@ export function useMessages(channelId: string | null) {
 			);
 		});
 
-		socket.on("thread-reply", ({ messageId, reply }: any) => {
+		socket.on("thread_reply", ({ messageId, reply }: any) => {
 			setMessages((prev) =>
 				prev.map((msg) => {
 					if (msg.id === messageId) {
@@ -68,10 +68,10 @@ export function useMessages(channelId: string | null) {
 		});
 
 		return () => {
-			socket.off("new-message");
-			socket.off("reaction-added");
-			socket.off("reaction-removed");
-			socket.off("thread-reply");
+			socket.off("new_message");
+			socket.off("reaction_added");
+			socket.off("reaction_removed");
+			socket.off("thread_reply");
 		};
 	}, [socket, channelId]);
 
@@ -79,7 +79,7 @@ export function useMessages(channelId: string | null) {
 		if (!channelId) return;
 
 		socket?.emit(
-			"send-message",
+			"send_message",
 			{ channelId, content },
 			(response: any) => {
 				if (!response.success) {
@@ -92,7 +92,7 @@ export function useMessages(channelId: string | null) {
 	const addReaction = (messageId: string, emoji: string) => {
 		if (!channelId) return;
 
-		socket?.emit("add-reaction", { channelId, messageId, emoji });
+		socket?.emit("add_reaction", { channelId, messageId, emoji });
 	};
 
 	const sendThreadReply = (
@@ -103,7 +103,7 @@ export function useMessages(channelId: string | null) {
 
 		return new Promise((resolve, reject) => {
 			socket?.emit(
-				"send-thread-reply",
+				"send_thread_reply",
 				{ channelId, messageId, content },
 				(response: any) => {
 					if (response.success) {
