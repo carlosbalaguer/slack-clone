@@ -1,4 +1,10 @@
 import type { FastifyInstance } from "fastify";
+import {
+	toMessageDTO,
+	toMessageListDTO,
+	type MessageDTO,
+	type MessageListDTO,
+} from "../types/dtos/message.dto.js";
 import { extractMentions } from "../utils/text.js";
 
 interface CreateMessageParams {
@@ -12,7 +18,10 @@ export const messageService = {
 	 * Crea un mensaje, maneja caché y dispara efectos secundarios (jobs).
 	 * Agnóstico al transporte (funciona para REST y WS).
 	 */
-	async create(app: FastifyInstance, params: CreateMessageParams) {
+	async create(
+		app: FastifyInstance,
+		params: CreateMessageParams
+	): Promise<MessageDTO> {
 		const { content, channelId, workosUserId } = params;
 
 		// 1. Resolver Usuario
@@ -74,7 +83,7 @@ export const messageService = {
 			);
 		}
 
-		return message;
+		return toMessageDTO(message);
 	},
 
 	/**
@@ -84,13 +93,14 @@ export const messageService = {
 		app: FastifyInstance,
 		channelId: string,
 		limit: number = 50
-	) {
+	): Promise<MessageListDTO> {
 		const cacheKey = `messages:${channelId}:${limit}`;
 
 		// 1. Try Cache
 		const cached = await app.redis.get(cacheKey);
 		if (cached) {
-			return { messages: JSON.parse(cached), cached: true };
+			const rawMessages = JSON.parse(cached);
+			return toMessageListDTO(rawMessages, true);
 		}
 
 		// 2. Query DB
@@ -104,11 +114,19 @@ export const messageService = {
 			.limit(limit);
 
 		// 3. Set Cache (30 segundos - Hot data)
-		if (messages) {
-			await app.redis.set(cacheKey, JSON.stringify(messages), "EX", 30);
+		const reversedMessages = messages?.reverse() || [];
+
+		// 3. Set Cache (30 segundos - Hot data)
+		if (messages && messages.length > 0) {
+			await app.redis.set(
+				cacheKey,
+				JSON.stringify(reversedMessages),
+				"EX",
+				30
+			);
 		}
 
-		return { messages: messages?.reverse() || [], cached: false };
+		return toMessageListDTO(reversedMessages, false);
 	},
 };
 

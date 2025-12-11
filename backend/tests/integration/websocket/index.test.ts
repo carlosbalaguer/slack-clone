@@ -203,8 +203,10 @@ describe("WebSocket Integration", () => {
 
 			expect(receivedMessage).toMatchObject({
 				content: "Hello everyone!",
-				channel_id: testChannelId,
-				user_id: testUserId,
+				channelId: testChannelId,
+				user: {
+					id: testUserId,
+				},
 			});
 			expect(receivedMessage).toHaveProperty("id");
 		});

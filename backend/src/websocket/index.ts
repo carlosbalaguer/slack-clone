@@ -3,6 +3,7 @@ import type { Server, Socket } from "socket.io";
 import { channelService } from "../services/channel.service.js";
 import { messageService } from "../services/message.service.js";
 import { userService } from "../services/user.service.js";
+import type { MessageDTO } from "../types/dtos/message.dto.js";
 
 interface ServerToClientEvents {
 	new_message: (message: any) => void;
@@ -106,11 +107,14 @@ export function setupWebSocket(
 		// New message
 		socket.on("send_message", async ({ channelId, content }, callback) => {
 			try {
-				const message = await messageService.create(fastify, {
-					content,
-					channelId,
-					workosUserId: workosId,
-				});
+				const message: MessageDTO = await messageService.create(
+					fastify,
+					{
+						content,
+						channelId,
+						workosUserId: workosId,
+					}
+				);
 
 				io.to(`channel:${channelId}`).emit("new_message", message);
 

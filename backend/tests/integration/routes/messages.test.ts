@@ -1,5 +1,13 @@
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 import { buildTestApp, closeTestApp } from "../helpers/test-app.js";
 import { generateTestUser, uniqueChannelName } from "../helpers/test-data.js";
 
@@ -86,7 +94,7 @@ describe("Messages Routes - Integration", () => {
 			const body = response.json();
 			expect(body).toHaveProperty("message");
 			expect(body.message.content).toBe(messageData.content);
-			expect(body.message.channel_id).toBe(testChannelId);
+			expect(body.message.channelId).toBe(testChannelId);
 		});
 
 		it("should reject empty content", async () => {
@@ -167,6 +175,18 @@ describe("Messages Routes - Integration", () => {
 		});
 
 		it("should return cached messages on second request", async () => {
+			await app.inject({
+				method: "POST",
+				url: "/api/messages",
+				headers: {
+					authorization: "Bearer mock_token",
+				},
+				payload: {
+					channel_id: testChannelId,
+					content: "Test message for cache",
+				},
+			});
+
 			// Primera request (cache miss)
 			const response1 = await app.inject({
 				method: "GET",
@@ -177,7 +197,8 @@ describe("Messages Routes - Integration", () => {
 			});
 
 			expect(response1.statusCode).toBe(200);
-			expect(response1.json().cached).toBeFalsy();
+			const body1 = response1.json();
+			expect(body1.cached).toBe(false);
 
 			// Segunda request (cache hit)
 			const response2 = await app.inject({
@@ -189,7 +210,8 @@ describe("Messages Routes - Integration", () => {
 			});
 
 			expect(response2.statusCode).toBe(200);
-			expect(response2.json().cached).toBe(true); // ⭐ Línea 32
+			const body2 = response2.json();
+			expect(body2.cached).toBe(true);
 		});
 	});
 
@@ -332,7 +354,9 @@ describe("Messages Routes - Integration", () => {
 			});
 
 			expect(response.statusCode).toBe(400);
-			expect(response.json()).toEqual({ error: "Failed to create message" });
+			expect(response.json()).toEqual({
+				error: "Failed to create message",
+			});
 
 			// Restore
 			appAny.supabase.from = originalFrom;
