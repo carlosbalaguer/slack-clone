@@ -2,11 +2,22 @@ import { WorkOS } from "@workos-inc/node";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import fp from "fastify-plugin";
 import * as jose from "jose";
+import { WorkOSClient } from "../utils/workos-client.js";
 
 const workos = new WorkOS(process.env.WORKOS_API_KEY);
 
+declare module "fastify" {
+	interface FastifyInstance {
+		workos: WorkOS;
+		workosClient: WorkOSClient;
+	}
+}
+
 export const workosAuthPlugin = fp(async (fastify: FastifyInstance) => {
 	fastify.decorate("workos", workos);
+
+	const workosClient = new WorkOSClient(fastify);
+	fastify.decorate("workosClient", workosClient);
 
 	// Create JWKS once (more efficient)
 	const JWKS = jose.createRemoteJWKSet(
@@ -56,5 +67,9 @@ export const workosAuthPlugin = fp(async (fastify: FastifyInstance) => {
 					.send({ error: "Authentication failed" });
 			}
 		}
+	);
+
+	fastify.log.info(
+		"✅ WorkOS Auth plugin registered (with circuit breakers)"
 	);
 });

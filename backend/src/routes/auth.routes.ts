@@ -14,12 +14,18 @@ export async function authRoutes(fastify: FastifyInstance) {
 		try {
 			const { email } = magicLinkSchema.parse(request.body);
 
-			await fastify.workos.userManagement.createMagicAuth({
-				email,
-			});
+			await fastify.workosClient.sendMagicLink(email);
 
 			return { message: "Magic link sent to your email" };
-		} catch (err) {
+		} catch (err: any) {
+			if (
+				err.message === "Authentication service temporarily unavailable"
+			) {
+				return reply.status(503).send({
+					error: "Authentication service temporarily unavailable. Please try again later.",
+				});
+			}
+
 			fastify.log.error(err);
 			return reply
 				.status(400)
@@ -36,11 +42,7 @@ export async function authRoutes(fastify: FastifyInstance) {
 				user: workosUser,
 				accessToken,
 				refreshToken,
-			} = await fastify.workos.userManagement.authenticateWithMagicAuth({
-				email,
-				code,
-				clientId: process.env.WORKOS_CLIENT_ID!,
-			});
+			} = await fastify.workosClient.authenticateWithCode(code, email);
 
 			const dbUser = await userService.findOrCreate(fastify, {
 				workosId: workosUser.id,
@@ -55,7 +57,15 @@ export async function authRoutes(fastify: FastifyInstance) {
 				accessToken,
 				refreshToken,
 			};
-		} catch (err) {
+		} catch (err: any) {
+			if (
+				err.message === "Authentication service temporarily unavailable"
+			) {
+				return reply.status(503).send({
+					error: "Authentication service temporarily unavailable. Please try again later.",
+				});
+			}
+
 			if (err instanceof ZodError) {
 				fastify.log.error(err);
 				return reply.status(400).send({
@@ -73,13 +83,9 @@ export async function authRoutes(fastify: FastifyInstance) {
 		try {
 			const { refreshToken } = refreshTokenSchema.parse(request.body);
 
-			const response =
-				await fastify.workos.userManagement.authenticateWithRefreshToken(
-					{
-						refreshToken,
-						clientId: process.env.WORKOS_CLIENT_ID!,
-					}
-				);
+			const response = await fastify.workosClient.refreshToken(
+				refreshToken
+			);
 
 			return {
 				accessToken: response.accessToken,

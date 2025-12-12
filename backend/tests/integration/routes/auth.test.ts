@@ -17,16 +17,15 @@ describe("Auth Routes - Magic Link", () => {
 		it("should send magic link with valid email", async () => {
 			const appAny = app as any;
 
-			// ⭐ Mock WorkOS createMagicAuth
-			const mockCreateMagicAuth = vi.fn().mockResolvedValue({
+			// ⭐ Mock workosClient
+			const mockSendMagicLink = vi.fn().mockResolvedValue({
 				id: "magic_123",
 				email: "test@example.com",
 			});
 
-			vi.spyOn(
-				appAny.workos.userManagement,
-				"createMagicAuth"
-			).mockImplementation(mockCreateMagicAuth);
+			vi.spyOn(appAny.workosClient, "sendMagicLink").mockImplementation(
+				mockSendMagicLink
+			);
 
 			const response = await app.inject({
 				method: "POST",
@@ -40,9 +39,7 @@ describe("Auth Routes - Magic Link", () => {
 			expect(response.json()).toEqual({
 				message: "Magic link sent to your email",
 			});
-			expect(mockCreateMagicAuth).toHaveBeenCalledWith({
-				email: "test@example.com",
-			});
+			expect(mockSendMagicLink).toHaveBeenCalledWith("test@example.com");
 
 			vi.restoreAllMocks();
 		});
@@ -63,10 +60,9 @@ describe("Auth Routes - Magic Link", () => {
 			const appAny = app as any;
 
 			// Mock failure
-			vi.spyOn(
-				appAny.workos.userManagement,
-				"createMagicAuth"
-			).mockRejectedValue(new Error("WorkOS API error"));
+			vi.spyOn(appAny.workosClient, "sendMagicLink").mockRejectedValue(
+				new Error("WorkOS API error")
+			);
 
 			const response = await app.inject({
 				method: "POST",
@@ -79,6 +75,30 @@ describe("Auth Routes - Magic Link", () => {
 			expect(response.statusCode).toBe(400);
 			expect(response.json()).toEqual({
 				error: "Failed to send magic link",
+			});
+
+			vi.restoreAllMocks();
+		});
+
+		it("should return 503 when circuit breaker is open", async () => {
+			const appAny = app as any;
+
+			// ✅ Mock circuit breaker abierto
+			vi.spyOn(appAny.workosClient, "sendMagicLink").mockRejectedValue(
+				new Error("Authentication service temporarily unavailable")
+			);
+
+			const response = await app.inject({
+				method: "POST",
+				url: "/api/auth/magic-link",
+				payload: {
+					email: "test@example.com",
+				},
+			});
+
+			expect(response.statusCode).toBe(503);
+			expect(response.json()).toEqual({
+				error: "Authentication service temporarily unavailable. Please try again later.",
 			});
 
 			vi.restoreAllMocks();
@@ -153,6 +173,20 @@ describe("Auth Routes - Magic Link", () => {
 				);
 			}
 
+			vi.spyOn(
+				appAny.workosClient,
+				"authenticateWithCode"
+			).mockResolvedValue({
+				user: {
+					id: expectedWorkosId,
+					email: uniqueEmail,
+					firstName: "Existing",
+					lastName: "User",
+				},
+				accessToken: "access_token_123",
+				refreshToken: "refresh_token_123",
+			});
+
 			const response = await app.inject({
 				method: "POST",
 				url: "/api/auth/verify",
@@ -179,8 +213,8 @@ describe("Auth Routes - Magic Link", () => {
 
 			// Mock WorkOS failure
 			vi.spyOn(
-				appAny.workos.userManagement,
-				"authenticateWithMagicAuth"
+				appAny.workosClient,
+				"authenticateWithCode"
 			).mockRejectedValue(new Error("Invalid code"));
 
 			const response = await app.inject({
@@ -212,34 +246,63 @@ describe("Auth Routes - Magic Link", () => {
 
 			expect(response.statusCode).toBe(400);
 		});
-	});
 
-	describe("POST /api/auth/refresh", () => {
-		it("should refresh tokens with valid refresh token", async () => {
+		it("should return 503 when circuit breaker is open", async () => {
 			const appAny = app as any;
 
-			// Mock WorkOS refresh
+			// ✅ Mock circuit breaker abierto
 			vi.spyOn(
-				appAny.workos.userManagement,
-				"authenticateWithRefreshToken"
-			).mockResolvedValue({
-				accessToken: "new_access_token",
-				refreshToken: "new_refresh_token",
-			});
+				appAny.workosClient,
+				"authenticateWithCode"
+			).mockRejectedValue(
+				new Error("Authentication service temporarily unavailable")
+			);
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/refresh",
+				url: "/api/auth/verify",
 				payload: {
-					refreshToken: "valid_refresh_token",
+					email: "test@example.com",
+					code: "123456",
+				},
+			});
+
+			expect(response.statusCode).toBe(503);
+			expect(response.json()).toEqual({
+				error: "Authentication service temporarily unavailable. Please try again later.",
+			});
+
+			vi.restoreAllMocks();
+		});
+	});
+
+	describe("POST /api/auth/refresh", () => {
+		it("should send magic link with valid email", async () => {
+			const appAny = app as any;
+
+			// ✅ Mock workosClient en vez de workos
+			const mockSendMagicLink = vi.fn().mockResolvedValue({
+				id: "magic_123",
+				email: "test@example.com",
+			});
+
+			vi.spyOn(appAny.workosClient, "sendMagicLink").mockImplementation(
+				mockSendMagicLink
+			);
+
+			const response = await app.inject({
+				method: "POST",
+				url: "/api/auth/magic-link",
+				payload: {
+					email: "test@example.com",
 				},
 			});
 
 			expect(response.statusCode).toBe(200);
 			expect(response.json()).toEqual({
-				accessToken: "new_access_token",
-				refreshToken: "new_refresh_token",
+				message: "Magic link sent to your email",
 			});
+			expect(mockSendMagicLink).toHaveBeenCalledWith("test@example.com");
 
 			vi.restoreAllMocks();
 		});

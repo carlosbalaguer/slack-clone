@@ -347,6 +347,53 @@ export async function build(options?: BuildOptions) {
 			}
 
 			// ============================================
+			// CIRCUIT BREAKERS CHECK
+			// ============================================
+			const circuitSpan = tracer.startSpan(
+				"health.circuit-breakers-check"
+			);
+			try {
+				span.addEvent("checking-circuit-breakers");
+				const circuitBreakers = app.workosClient.healthCheck();
+
+				const allCircuitsHealthy =
+					circuitBreakers.magicLink.healthy &&
+					circuitBreakers.authenticate.healthy &&
+					circuitBreakers.getUser.healthy;
+
+				circuitSpan.setAttribute(
+					"circuits.status",
+					allCircuitsHealthy ? "healthy" : "degraded"
+				);
+				circuitSpan.setAttribute(
+					"circuits.magicLink",
+					circuitBreakers.magicLink.state
+				);
+				circuitSpan.setAttribute(
+					"circuits.authenticate",
+					circuitBreakers.authenticate.state
+				);
+				circuitSpan.setAttribute(
+					"circuits.getUser",
+					circuitBreakers.getUser.state
+				);
+				circuitSpan.setStatus({ code: SpanStatusCode.OK });
+				checks.circuitBreakers = allCircuitsHealthy ? "ok" : "degraded";
+			} catch (error) {
+				circuitSpan.setAttribute("circuits.status", "error");
+				circuitSpan.recordException(error as Error);
+				circuitSpan.setStatus({ code: SpanStatusCode.ERROR });
+				checks.circuitBreakers = "error";
+
+				request.log.error(
+					{ err: error },
+					"Circuit breakers health check failed"
+				);
+			} finally {
+				circuitSpan.end();
+			}
+
+			// ============================================
 			// FINAL STATUS
 			// ============================================
 			span.addEvent("health-checks-completed", {
@@ -384,11 +431,11 @@ export async function build(options?: BuildOptions) {
 				"Health check completed"
 			);
 
-			// ⭐ RESPUESTA IDÉNTICA - Los tests siguen pasando
 			return {
-				status: "ok",
+				status: allHealthy ? "ok" : "degraded",
 				timestamp: new Date().toISOString(),
 				uptime: process.uptime(),
+				checks,
 			};
 		} catch (error) {
 			span.recordException(error as Error);
