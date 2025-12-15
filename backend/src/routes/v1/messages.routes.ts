@@ -2,15 +2,18 @@ import type { FastifyInstance } from "fastify";
 import {
 	createMessageSchema,
 	uuidParamSchema,
-} from "../schemas/message.schema.js";
-import { messageService } from "../services/message.service.js";
-import type { MessageDTO, MessageListDTO } from "../types/dtos/message.dto.js";
+} from "../../schemas/message.schema.js";
+import { messageService } from "../../services/message.service.js";
+import type {
+	MessageDTO,
+	MessageListDTO,
+} from "../../types/dtos/message.dto.js";
 import type {
 	CreateMessageRequest,
 	GetMessagesQuery,
-} from "../types/requests/message.request.js";
-import type { ErrorResponse } from "../types/responses/error.response.js";
-import { getAuthUserId } from "../utils/auth.js";
+} from "../../types/requests/message.request.js";
+import type { ErrorResponse } from "../../types/responses/error.response.js";
+import { getAuthUserId } from "../../utils/auth.js";
 
 export async function messagesRoutes(fastify: FastifyInstance) {
 	// Get messages for channel

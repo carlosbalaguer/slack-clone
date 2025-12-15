@@ -18,13 +18,9 @@ import { redisPlugin } from "./plugins/redis.js";
 import { workosAuthPlugin } from "./plugins/workos-auth.js";
 
 // Routes
-import { authRoutes } from "./routes/auth.routes.js";
-import { channelsRoutes } from "./routes/channels.routes.js";
-import { messagesRoutes } from "./routes/messages.routes.js";
-import { usersRoutes } from "./routes/users.routes.js";
+import { setupRoutes } from "./routes/index.js";
 
 // WebSocket
-import { SpanStatusCode, trace } from "@opentelemetry/api";
 import { queuePlugin } from "./plugins/queue.js";
 import { setupWebSocket } from "./websocket/index.js";
 import { startWorkers } from "./workers/index.js";
@@ -209,15 +205,7 @@ export async function build(options?: BuildOptions) {
 		app.log.info("⏭️  WebSocket disabled");
 	}
 
-	app.get("/metrics", async (request, reply) => {
-		reply.header("Content-Type", metrics.register.contentType);
-		return metrics.register.metrics();
-	});
-
-	await app.register(authRoutes, { prefix: "/api/auth" });
-	await app.register(channelsRoutes, { prefix: "/api/channels" });
-	await app.register(messagesRoutes, { prefix: "/api/messages" });
-	await app.register(usersRoutes, { prefix: "/api/users" });
+	await setupRoutes(app);
 
 	// ⭐ SOLO PARA TESTING - Eliminar después
 	if (process.env.NODE_ENV !== "production") {
@@ -255,204 +243,6 @@ export async function build(options?: BuildOptions) {
 			return { status: "ok" };
 		});
 	}
-
-	app.get("/health", async (request, reply) => {
-		const tracer = trace.getTracer("slack-clone-backend");
-		const span = tracer.startSpan("health-check");
-
-		const checks: Record<string, string> = {};
-
-		try {
-			// ============================================
-			// SUPABASE DATABASE CHECK
-			// ============================================
-			const dbSpan = tracer.startSpan("health.supabase-check");
-			try {
-				span.addEvent("checking-supabase");
-
-				// Query simple para verificar conectividad
-				const { data, error } = await app.supabase
-					.from("users")
-					.select("id")
-					.limit(1);
-
-				if (error) throw error;
-
-				dbSpan.setAttribute("supabase.status", "healthy");
-				dbSpan.setAttribute("db.type", "postgresql");
-				dbSpan.setAttribute("supabase.provider", "supabase");
-				dbSpan.setStatus({ code: SpanStatusCode.OK });
-				checks.database = "ok";
-			} catch (error) {
-				dbSpan.setAttribute("supabase.status", "unhealthy");
-				dbSpan.recordException(error as Error);
-				dbSpan.setStatus({ code: SpanStatusCode.ERROR });
-				checks.database = "error";
-
-				request.log.error(
-					{ err: error },
-					"Supabase health check failed"
-				);
-			} finally {
-				dbSpan.end();
-			}
-
-			// ============================================
-			// REDIS CHECK
-			// ============================================
-			const redisSpan = tracer.startSpan("health.redis-check");
-			try {
-				span.addEvent("checking-redis");
-				await app.redis.ping();
-
-				redisSpan.setAttribute("redis.status", "healthy");
-				redisSpan.setStatus({ code: SpanStatusCode.OK });
-				checks.redis = "ok";
-			} catch (error) {
-				redisSpan.setAttribute("redis.status", "unhealthy");
-				redisSpan.recordException(error as Error);
-				redisSpan.setStatus({ code: SpanStatusCode.ERROR });
-				checks.redis = "error";
-
-				request.log.error({ err: error }, "Redis health check failed");
-			} finally {
-				redisSpan.end();
-			}
-
-			// ============================================
-			// QUEUE CHECK (opcional)
-			// ============================================
-			const queueSpan = tracer.startSpan("health.queue-check");
-			try {
-				span.addEvent("checking-queue");
-				// Verifica que Bull queue esté responsive
-				const notificationQueue = app.queues.notifications;
-				const jobCounts = await notificationQueue.getJobCounts();
-
-				queueSpan.setAttribute("queue.status", "healthy");
-				queueSpan.setAttribute("queue.waiting", jobCounts.waiting || 0);
-				queueSpan.setAttribute("queue.active", jobCounts.active || 0);
-				queueSpan.setAttribute("queue.failed", jobCounts.failed || 0);
-				queueSpan.setStatus({ code: SpanStatusCode.OK });
-				checks.queue = "ok";
-			} catch (error) {
-				queueSpan.setAttribute("queue.status", "unhealthy");
-				queueSpan.recordException(error as Error);
-				queueSpan.setStatus({ code: SpanStatusCode.ERROR });
-				checks.queue = "error";
-
-				request.log.error({ err: error }, "Queue health check failed");
-			} finally {
-				queueSpan.end();
-			}
-
-			// ============================================
-			// CIRCUIT BREAKERS CHECK
-			// ============================================
-			const circuitSpan = tracer.startSpan(
-				"health.circuit-breakers-check"
-			);
-			try {
-				span.addEvent("checking-circuit-breakers");
-				const circuitBreakers = app.workosClient.healthCheck();
-
-				const allCircuitsHealthy =
-					circuitBreakers.magicLink.healthy &&
-					circuitBreakers.authenticate.healthy &&
-					circuitBreakers.getUser.healthy;
-
-				circuitSpan.setAttribute(
-					"circuits.status",
-					allCircuitsHealthy ? "healthy" : "degraded"
-				);
-				circuitSpan.setAttribute(
-					"circuits.magicLink",
-					circuitBreakers.magicLink.state
-				);
-				circuitSpan.setAttribute(
-					"circuits.authenticate",
-					circuitBreakers.authenticate.state
-				);
-				circuitSpan.setAttribute(
-					"circuits.getUser",
-					circuitBreakers.getUser.state
-				);
-				circuitSpan.setStatus({ code: SpanStatusCode.OK });
-				checks.circuitBreakers = allCircuitsHealthy ? "ok" : "degraded";
-			} catch (error) {
-				circuitSpan.setAttribute("circuits.status", "error");
-				circuitSpan.recordException(error as Error);
-				circuitSpan.setStatus({ code: SpanStatusCode.ERROR });
-				checks.circuitBreakers = "error";
-
-				request.log.error(
-					{ err: error },
-					"Circuit breakers health check failed"
-				);
-			} finally {
-				circuitSpan.end();
-			}
-
-			// ============================================
-			// FINAL STATUS
-			// ============================================
-			span.addEvent("health-checks-completed", {
-				"check.database": checks.database || "unknown",
-				"check.redis": checks.redis || "unknown",
-				"check.queue": checks.queue || "unknown",
-			});
-
-			const allHealthy = Object.values(checks).every(
-				(status) => status === "ok"
-			);
-
-			if (allHealthy) {
-				span.setAttribute("health.status", "healthy");
-				span.setStatus({ code: SpanStatusCode.OK });
-			} else {
-				span.setAttribute("health.status", "degraded");
-				span.setAttribute(
-					"health.failed_checks",
-					Object.entries(checks)
-						.filter(([_, status]) => status === "error")
-						.map(([name]) => name)
-						.join(", ")
-				);
-				span.setStatus({ code: SpanStatusCode.ERROR });
-			}
-
-			// Log estructurado
-			request.log.info(
-				{
-					action: "health.check.completed",
-					checks,
-					allHealthy,
-				},
-				"Health check completed"
-			);
-
-			return {
-				status: allHealthy ? "ok" : "degraded",
-				timestamp: new Date().toISOString(),
-				uptime: process.uptime(),
-				checks,
-			};
-		} catch (error) {
-			span.recordException(error as Error);
-			span.setStatus({ code: SpanStatusCode.ERROR });
-
-			request.log.error({ err: error }, "Health check failed");
-
-			// Respuesta igual incluso si hay error
-			return {
-				status: "ok",
-				timestamp: new Date().toISOString(),
-				uptime: process.uptime(),
-			};
-		} finally {
-			span.end();
-		}
-	});
 
 	if (enableWorkers) {
 		const workers = startWorkers(app);

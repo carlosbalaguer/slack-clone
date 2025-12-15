@@ -53,7 +53,7 @@ describe("Messages Routes - Integration", () => {
 	beforeEach(async () => {
 		const channelResponse = await app.inject({
 			method: "POST",
-			url: "/api/channels",
+			url: "/api/v1/channels",
 			headers: {
 				authorization: "Bearer mock_token",
 			},
@@ -73,7 +73,7 @@ describe("Messages Routes - Integration", () => {
 		testChannelId = channelData.channel.id;
 	});
 
-	describe("POST /api/messages", () => {
+	describe("POST /api/v1/messages", () => {
 		it("should create message with valid data", async () => {
 			const messageData = {
 				channel_id: testChannelId,
@@ -82,7 +82,7 @@ describe("Messages Routes - Integration", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/messages",
+				url: "/api/v1/messages",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -100,7 +100,7 @@ describe("Messages Routes - Integration", () => {
 		it("should reject empty content", async () => {
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/messages",
+				url: "/api/v1/messages",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -116,7 +116,7 @@ describe("Messages Routes - Integration", () => {
 		it("should reject missing channel_id", async () => {
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/messages",
+				url: "/api/v1/messages",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -131,7 +131,7 @@ describe("Messages Routes - Integration", () => {
 		it("should reject invalid channel_id UUID", async () => {
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/messages",
+				url: "/api/v1/messages",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -145,11 +145,11 @@ describe("Messages Routes - Integration", () => {
 		});
 	});
 
-	describe("GET /api/messages/channel/:channelId", () => {
+	describe("GET /api/v1/messages/channel/:channelId", () => {
 		it("should return messages for channel", async () => {
 			const response = await app.inject({
 				method: "GET",
-				url: `/api/messages/channel/${testChannelId}`,
+				url: `/api/v1/messages/channel/${testChannelId}`,
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -165,7 +165,7 @@ describe("Messages Routes - Integration", () => {
 		it("should reject invalid UUID", async () => {
 			const response = await app.inject({
 				method: "GET",
-				url: "/api/messages/channel/invalid-uuid",
+				url: "/api/v1/messages/channel/invalid-uuid",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -177,7 +177,7 @@ describe("Messages Routes - Integration", () => {
 		it("should return cached messages on second request", async () => {
 			await app.inject({
 				method: "POST",
-				url: "/api/messages",
+				url: "/api/v1/messages",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -190,7 +190,7 @@ describe("Messages Routes - Integration", () => {
 			// Primera request (cache miss)
 			const response1 = await app.inject({
 				method: "GET",
-				url: `/api/messages/channel/${testChannelId}`,
+				url: `/api/v1/messages/channel/${testChannelId}`,
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -203,7 +203,7 @@ describe("Messages Routes - Integration", () => {
 			// Segunda request (cache hit)
 			const response2 = await app.inject({
 				method: "GET",
-				url: `/api/messages/channel/${testChannelId}`,
+				url: `/api/v1/messages/channel/${testChannelId}`,
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -215,7 +215,7 @@ describe("Messages Routes - Integration", () => {
 		});
 	});
 
-	describe("POST /api/messages - Advanced features", () => {
+	describe("POST /api/v1/messages - Advanced features", () => {
 		it("should process @mentions in message", async () => {
 			const appAny = app as any;
 
@@ -234,7 +234,7 @@ describe("Messages Routes - Integration", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/messages",
+				url: "/api/v1/messages",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -258,7 +258,7 @@ describe("Messages Routes - Integration", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/messages",
+				url: "/api/v1/messages",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -277,7 +277,7 @@ describe("Messages Routes - Integration", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/messages",
+				url: "/api/v1/messages",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -288,7 +288,7 @@ describe("Messages Routes - Integration", () => {
 		});
 	});
 
-	describe("POST /api/messages - Error handling", () => {
+	describe("POST /api/v1/messages - Error handling", () => {
 		it("should return 404 when user not found", async () => {
 			const appAny = app as any;
 
@@ -297,7 +297,7 @@ describe("Messages Routes - Integration", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/messages",
+				url: "/api/v1/messages",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -343,7 +343,7 @@ describe("Messages Routes - Integration", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/messages",
+				url: "/api/v1/messages",
 				headers: {
 					authorization: "Bearer mock_token",
 				},

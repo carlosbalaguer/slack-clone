@@ -4,9 +4,9 @@ import {
 	magicLinkSchema,
 	refreshTokenSchema,
 	verifyMagicLinkSchema,
-} from "../schemas/auth.schema.js";
-import { userService } from "../services/user.service.js";
-import { getAuthUserId } from "../utils/auth.js";
+} from "../../schemas/auth.schema.js";
+import { userService } from "../../services/user.service.js";
+import { getAuthUserId } from "../../utils/auth.js";
 
 export async function authRoutes(fastify: FastifyInstance) {
 	// Send magic link

@@ -42,7 +42,7 @@ describe("Channels Routes - Integration", () => {
 		await closeTestApp(app);
 	});
 
-	describe("POST /api/channels", () => {
+	describe("POST /api/v1/channels", () => {
 		it("should create channel with valid data", async () => {
 			const channelData = {
 				name: uniqueChannelName(),
@@ -51,7 +51,7 @@ describe("Channels Routes - Integration", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/channels",
+				url: "/api/v1/channels",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -69,7 +69,7 @@ describe("Channels Routes - Integration", () => {
 		it("should reject channel without name", async () => {
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/channels",
+				url: "/api/v1/channels",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -82,11 +82,11 @@ describe("Channels Routes - Integration", () => {
 		});
 	});
 
-	describe("GET /api/channels", () => {
+	describe("GET /api/v1/channels", () => {
 		it("should return channels list", async () => {
 			const response = await app.inject({
 				method: "GET",
-				url: "/api/channels",
+				url: "/api/v1/channels",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -100,12 +100,12 @@ describe("Channels Routes - Integration", () => {
 		});
 	});
 
-	describe("GET /api/channels/:id", () => {
+	describe("GET /api/v1/channels/:id", () => {
 		beforeEach(async () => {
 			// Crear channel para tests
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/channels",
+				url: "/api/v1/channels",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -121,7 +121,7 @@ describe("Channels Routes - Integration", () => {
 		it("should return channel by id", async () => {
 			const response = await app.inject({
 				method: "GET",
-				url: `/api/channels/${testChannelId}`,
+				url: `/api/v1/channels/${testChannelId}`,
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -139,7 +139,7 @@ describe("Channels Routes - Integration", () => {
 
 			const response = await app.inject({
 				method: "GET",
-				url: `/api/channels/${fakeId}`,
+				url: `/api/v1/channels/${fakeId}`,
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -152,7 +152,7 @@ describe("Channels Routes - Integration", () => {
 		it("should reject invalid UUID", async () => {
 			const response = await app.inject({
 				method: "GET",
-				url: "/api/channels/invalid-uuid",
+				url: "/api/v1/channels/invalid-uuid",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -163,7 +163,7 @@ describe("Channels Routes - Integration", () => {
 		});
 	});
 
-	describe("POST /api/channels - Error handling", () => {
+	describe("POST /api/v1/channels - Error handling", () => {
 		it("should handle database error on insert", async () => {
 			const appAny = app as any;
 
@@ -182,7 +182,7 @@ describe("Channels Routes - Integration", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/channels",
+				url: "/api/v1/channels",
 				headers: {
 					authorization: "Bearer mock_token",
 				},

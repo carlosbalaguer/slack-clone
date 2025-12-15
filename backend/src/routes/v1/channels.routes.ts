@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { createChannelSchema } from "../schemas/channel.schema.js";
-import { channelService } from "../services/channel.service.js";
-import type { ChannelDTO, ChannelListDTO } from "../types/dtos/channel.dto.js";
-import type { CreateChannelRequest } from "../types/requests/channel.request.js";
-import type { ErrorResponse } from "../types/responses/error.response.js";
-import { getAuthUserId } from "../utils/auth.js";
+import { createChannelSchema } from "../../schemas/channel.schema.js";
+import { channelService } from "../../services/channel.service.js";
+import type { ChannelDTO, ChannelListDTO } from "../../types/dtos/channel.dto.js";
+import type { CreateChannelRequest } from "../../types/requests/channel.request.js";
+import type { ErrorResponse } from "../../types/responses/error.response.js";
+import { getAuthUserId } from "../../utils/auth.js";
 
 export async function channelsRoutes(fastify: FastifyInstance) {
 	/**

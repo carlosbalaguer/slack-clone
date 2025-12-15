@@ -13,7 +13,7 @@ describe("Auth Routes - Magic Link", () => {
 		await closeTestApp(app);
 	});
 
-	describe("POST /api/auth/magic-link", () => {
+	describe("POST /api/v1/auth/magic-link", () => {
 		it("should send magic link with valid email", async () => {
 			const appAny = app as any;
 
@@ -29,7 +29,7 @@ describe("Auth Routes - Magic Link", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/magic-link",
+				url: "/api/v1/auth/magic-link",
 				payload: {
 					email: "test@example.com",
 				},
@@ -47,7 +47,7 @@ describe("Auth Routes - Magic Link", () => {
 		it("should reject invalid email", async () => {
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/magic-link",
+				url: "/api/v1/auth/magic-link",
 				payload: {
 					email: "invalid-email",
 				},
@@ -66,7 +66,7 @@ describe("Auth Routes - Magic Link", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/magic-link",
+				url: "/api/v1/auth/magic-link",
 				payload: {
 					email: "test@example.com",
 				},
@@ -90,7 +90,7 @@ describe("Auth Routes - Magic Link", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/magic-link",
+				url: "/api/v1/auth/magic-link",
 				payload: {
 					email: "test@example.com",
 				},
@@ -105,7 +105,7 @@ describe("Auth Routes - Magic Link", () => {
 		});
 	});
 
-	describe("POST /api/auth/verify", () => {
+	describe("POST /api/v1/auth/verify", () => {
 		it("should verify magic link and create new user", async () => {
 			const appAny = app as any;
 
@@ -129,7 +129,7 @@ describe("Auth Routes - Magic Link", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/verify",
+				url: "/api/v1/auth/verify",
 				payload: {
 					email: "newuser@example.com",
 					code: "123456",
@@ -189,7 +189,7 @@ describe("Auth Routes - Magic Link", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/verify",
+				url: "/api/v1/auth/verify",
 				payload: {
 					email: existingUser.email, // ⭐ Usar email del user creado
 					code: "123456",
@@ -219,7 +219,7 @@ describe("Auth Routes - Magic Link", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/verify",
+				url: "/api/v1/auth/verify",
 				payload: {
 					email: "test@example.com",
 					code: "wrong2",
@@ -237,7 +237,7 @@ describe("Auth Routes - Magic Link", () => {
 		it("should reject invalid email format", async () => {
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/verify",
+				url: "/api/v1/auth/verify",
 				payload: {
 					email: "invalid",
 					code: "123456",
@@ -260,7 +260,7 @@ describe("Auth Routes - Magic Link", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/verify",
+				url: "/api/v1/auth/verify",
 				payload: {
 					email: "test@example.com",
 					code: "123456",
@@ -276,7 +276,7 @@ describe("Auth Routes - Magic Link", () => {
 		});
 	});
 
-	describe("POST /api/auth/refresh", () => {
+	describe("POST /api/v1/auth/refresh", () => {
 		it("should send magic link with valid email", async () => {
 			const appAny = app as any;
 
@@ -292,7 +292,7 @@ describe("Auth Routes - Magic Link", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/magic-link",
+				url: "/api/v1/auth/magic-link",
 				payload: {
 					email: "test@example.com",
 				},
@@ -318,7 +318,7 @@ describe("Auth Routes - Magic Link", () => {
 
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/refresh",
+				url: "/api/v1/auth/refresh",
 				payload: {
 					refreshToken: "invalid_token",
 				},
@@ -335,7 +335,7 @@ describe("Auth Routes - Magic Link", () => {
 		it("should reject missing refresh token", async () => {
 			const response = await app.inject({
 				method: "POST",
-				url: "/api/auth/refresh",
+				url: "/api/v1/auth/refresh",
 				payload: {},
 			});
 
@@ -343,7 +343,7 @@ describe("Auth Routes - Magic Link", () => {
 		});
 	});
 
-	describe("GET /api/auth/me", () => {
+	describe("GET /api/v1/auth/me", () => {
 		it("should return current user", async () => {
 			const appAny = app as any;
 
@@ -371,7 +371,7 @@ describe("Auth Routes - Magic Link", () => {
 
 			const response = await app.inject({
 				method: "GET",
-				url: "/api/auth/me",
+				url: "/api/v1/auth/me",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -396,7 +396,7 @@ describe("Auth Routes - Magic Link", () => {
 
 			const response = await app.inject({
 				method: "GET",
-				url: "/api/auth/me",
+				url: "/api/v1/auth/me",
 				headers: {
 					authorization: "Bearer mock_token",
 				},

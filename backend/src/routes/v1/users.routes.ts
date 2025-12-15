@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
-import { userService } from "../services/user.service.js";
-import type { UserDTO, UserListDTO } from "../types/dtos/user.dto.js";
+import { userService } from "../../services/user.service.js";
+import type { UserDTO, UserListDTO } from "../../types/dtos/user.dto.js";
 import type {
 	ListUsersQuery,
 	UpdateUserRequest,
-} from "../types/requests/user.request.js";
-import type { ErrorResponse } from "../types/responses/error.response.js";
-import { getAuthUserId } from "../utils/auth.js";
+} from "../../types/requests/user.request.js";
+import type { ErrorResponse } from "../../types/responses/error.response.js";
+import { getAuthUserId } from "../../utils/auth.js";
 
 export async function usersRoutes(fastify: FastifyInstance) {
 	/**

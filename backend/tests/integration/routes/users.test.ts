@@ -58,11 +58,11 @@ describe("Users Routes - Integration", () => {
 		await closeTestApp(app);
 	});
 
-	describe("GET /api/users", () => {
+	describe("GET /api/v1/users", () => {
 		it("should return all users", async () => {
 			const response = await app.inject({
 				method: "GET",
-				url: "/api/users",
+				url: "/api/v1/users",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -95,7 +95,7 @@ describe("Users Routes - Integration", () => {
 
 			const response = await app.inject({
 				method: "GET",
-				url: "/api/users",
+				url: "/api/v1/users",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -108,11 +108,11 @@ describe("Users Routes - Integration", () => {
 		});
 	});
 
-	describe("GET /api/users/:id", () => {
+	describe("GET /api/v1/users/:id", () => {
 		it("should return user by id", async () => {
 			const response = await app.inject({
 				method: "GET",
-				url: `/api/users/${otherUserId}`,
+				url: `/api/v1/users/${otherUserId}`,
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -133,7 +133,7 @@ describe("Users Routes - Integration", () => {
 
 			const response = await app.inject({
 				method: "GET",
-				url: `/api/users/${fakeId}`,
+				url: `/api/v1/users/${fakeId}`,
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -146,7 +146,7 @@ describe("Users Routes - Integration", () => {
 		it("should reject invalid UUID", async () => {
 			const response = await app.inject({
 				method: "GET",
-				url: "/api/users/invalid-uuid",
+				url: "/api/v1/users/invalid-uuid",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -156,11 +156,11 @@ describe("Users Routes - Integration", () => {
 		});
 	});
 
-	describe("PATCH /api/users/me/status", () => {
+	describe("PATCH /api/v1/users/me/status", () => {
 		it("should update status to away", async () => {
 			const response = await app.inject({
 				method: "PATCH",
-				url: "/api/users/me/status",
+				url: "/api/v1/users/me/status",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -179,7 +179,7 @@ describe("Users Routes - Integration", () => {
 		it("should update status to busy", async () => {
 			const response = await app.inject({
 				method: "PATCH",
-				url: "/api/users/me/status",
+				url: "/api/v1/users/me/status",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -195,7 +195,7 @@ describe("Users Routes - Integration", () => {
 		it("should update status to offline", async () => {
 			const response = await app.inject({
 				method: "PATCH",
-				url: "/api/users/me/status",
+				url: "/api/v1/users/me/status",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -211,7 +211,7 @@ describe("Users Routes - Integration", () => {
 		it("should update status to online", async () => {
 			const response = await app.inject({
 				method: "PATCH",
-				url: "/api/users/me/status",
+				url: "/api/v1/users/me/status",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -227,7 +227,7 @@ describe("Users Routes - Integration", () => {
 		it("should reject invalid status", async () => {
 			const response = await app.inject({
 				method: "PATCH",
-				url: "/api/users/me/status",
+				url: "/api/v1/users/me/status",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -245,7 +245,7 @@ describe("Users Routes - Integration", () => {
 		it("should reject missing status", async () => {
 			const response = await app.inject({
 				method: "PATCH",
-				url: "/api/users/me/status",
+				url: "/api/v1/users/me/status",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -256,11 +256,11 @@ describe("Users Routes - Integration", () => {
 		});
 	});
 
-	describe("PATCH /api/users/me", () => {
+	describe("PATCH /api/v1/users/me", () => {
 		it("should update display_name", async () => {
 			const response = await app.inject({
 				method: "PATCH",
-				url: "/api/users/me",
+				url: "/api/v1/users/me",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -279,7 +279,7 @@ describe("Users Routes - Integration", () => {
 		it("should update avatar_url", async () => {
 			const response = await app.inject({
 				method: "PATCH",
-				url: "/api/users/me",
+				url: "/api/v1/users/me",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -297,7 +297,7 @@ describe("Users Routes - Integration", () => {
 		it("should update both display_name and avatar_url", async () => {
 			const response = await app.inject({
 				method: "PATCH",
-				url: "/api/users/me",
+				url: "/api/v1/users/me",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -319,7 +319,7 @@ describe("Users Routes - Integration", () => {
 		it("should handle empty payload", async () => {
 			const response = await app.inject({
 				method: "PATCH",
-				url: "/api/users/me",
+				url: "/api/v1/users/me",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
@@ -333,7 +333,7 @@ describe("Users Routes - Integration", () => {
 		it("should set avatar_url to null", async () => {
 			const response = await app.inject({
 				method: "PATCH",
-				url: "/api/users/me",
+				url: "/api/v1/users/me",
 				headers: {
 					authorization: "Bearer mock_token",
 				},
