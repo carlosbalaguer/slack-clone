@@ -177,7 +177,7 @@ export async function build(options?: BuildOptions) {
 
 	if (mockWorkos) {
 		const mockWorkosPlugin = await import(
-			"../tests/integration/plugins/mock-workos.js"
+			"./plugins/mocks/mock-workos.js"
 		);
 		await app.register(mockWorkosPlugin.default);
 	} else {
@@ -186,7 +186,7 @@ export async function build(options?: BuildOptions) {
 
 	if (mockAuth) {
 		const { default: mockAuthPlugin } = await import(
-			"../tests/integration/plugins/mock-auth.js"
+			"./plugins/mocks/mock-auth.js"
 		);
 		await app.register(mockAuthPlugin);
 	}

@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
-import type { WorkOSClient } from "../../../src/utils/workos-client.js";
+import type { WorkOSClient } from "../../utils/workos-client.js";
 
 const mockWorkosPlugin: FastifyPluginAsync = async (fastify) => {
 	const mockWorkos = {
