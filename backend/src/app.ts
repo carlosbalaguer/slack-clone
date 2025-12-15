@@ -13,7 +13,9 @@ import {
 } from "./observability/index.js";
 
 // Plugins
+import securityHeadersPlugin from "./config/security-headers.plugin.js";
 import { databasePlugin } from "./plugins/database.js";
+import helmetPlugin from "./plugins/helmet.plugin.js";
 import { redisPlugin } from "./plugins/redis.js";
 import { workosAuthPlugin } from "./plugins/workos-auth.js";
 
@@ -156,6 +158,9 @@ export async function build(options?: BuildOptions) {
 		origin: process.env.FRONTEND_URL || "*",
 		credentials: true,
 	});
+
+	await app.register(helmetPlugin);
+	await app.register(securityHeadersPlugin);
 
 	await app.register(jwt, {
 		secret: process.env.JWT_SECRET!,
