@@ -49,13 +49,13 @@ jobs:
         env:
           NODE_ENV: test
           # Mock environment variables for tests
-          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || 'postgresql://mock:mock@localhost:5432/test' }}
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || 'postgresql://mockuser:mockpass@localhost:5432/mockdb' }}
           REDIS_URL: redis://localhost:6379/0
-          JWT_SECRET: mock-jwt-secret-not-real
-          WORKOS_API_KEY: mock-workos-api-key-not-real
-          WORKOS_CLIENT_ID: mock-workos-client-id-not-real
-          SUPABASE_URL: https://mock.supabase.co
-          SUPABASE_ANON_KEY: mock-supabase-anon-key-not-real-eyJhbGciOiJub25lIn0
+          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET || 'mock-jwt-secret-for-testing' }}
+          WORKOS_API_KEY: ${{ secrets.TEST_WORKOS_API_KEY || 'mock_workos_key' }}
+          WORKOS_CLIENT_ID: ${{ secrets.TEST_WORKOS_CLIENT_ID || 'mock_client_id' }}
+          SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL || 'https://mockproject.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.TEST_SUPABASE_ANON_KEY || 'mock_anon_key' }}
 
   lint:
     name: Code Quality

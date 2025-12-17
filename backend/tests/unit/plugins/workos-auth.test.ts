@@ -125,10 +125,11 @@ describe("workosAuthPlugin", () => {
 
 			await workosAuthPlugin(mockFastify);
 
+			const expectedClientId =
+				process.env.WORKOS_CLIENT_ID ||
+				"client_01JBVM2HH2WN5HY7ZZMZ6KD1PA";
 			expect(jose.createRemoteJWKSet).toHaveBeenCalledWith(
-				new URL(
-					"https://api.workos.com/sso/jwks/client_01JBVM2HH2WN5HY7ZZMZ6KD1PA"
-				)
+				new URL(`https://api.workos.com/sso/jwks/${expectedClientId}`)
 			);
 		});
 	});
