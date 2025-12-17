@@ -23,7 +23,15 @@ export async function messagesRoutes(fastify: FastifyInstance) {
 		Reply: MessageListDTO | ErrorResponse;
 	}>(
 		"/channel/:channelId",
-		{ onRequest: [fastify.authenticate] },
+		{
+			onRequest: [fastify.authenticate],
+			config: {
+				rateLimit: {
+					max: 100,
+					timeWindow: "1 minute",
+				},
+			},
+		},
 		async (request, reply) => {
 			const validatedParams = uuidParamSchema.safeParse(request.params);
 
@@ -51,28 +59,43 @@ export async function messagesRoutes(fastify: FastifyInstance) {
 	fastify.post<{
 		Body: CreateMessageRequest;
 		Reply: { message: MessageDTO } | ErrorResponse;
-	}>("/", { onRequest: [fastify.authenticate] }, async (request, reply) => {
-		try {
-			const { channel_id, content } = createMessageSchema.parse(
-				request.body
-			);
-			const workosUserId = getAuthUserId(request);
+	}>(
+		"/",
+		{
+			onRequest: [fastify.authenticate],
+			config: {
+				rateLimit: {
+					max: 200, // Higher for chat messages
+					timeWindow: "1 minute",
+				},
+			},
+		},
+		async (request, reply) => {
+			try {
+				const { channel_id, content } = createMessageSchema.parse(
+					request.body
+				);
+				const workosUserId = getAuthUserId(request);
 
-			const message: MessageDTO = await messageService.create(fastify, {
-				content,
-				channelId: channel_id,
-				workosUserId,
-			});
+				const message: MessageDTO = await messageService.create(
+					fastify,
+					{
+						content,
+						channelId: channel_id,
+						workosUserId,
+					}
+				);
 
-			return { message };
-		} catch (err: any) {
-			if (err.message === "User not found") {
-				return reply.status(404).send({ error: "User not found" });
+				return { message };
+			} catch (err: any) {
+				if (err.message === "User not found") {
+					return reply.status(404).send({ error: "User not found" });
+				}
+				fastify.log.error(err);
+				return reply
+					.status(400)
+					.send({ error: "Failed to create message" });
 			}
-			fastify.log.error(err);
-			return reply
-				.status(400)
-				.send({ error: "Failed to create message" });
 		}
-	});
+	);
 }

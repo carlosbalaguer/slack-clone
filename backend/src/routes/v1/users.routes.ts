@@ -15,17 +15,29 @@ export async function usersRoutes(fastify: FastifyInstance) {
 	fastify.get<{
 		Querystring: ListUsersQuery;
 		Reply: UserListDTO | ErrorResponse;
-	}>("/", { onRequest: [fastify.authenticate] }, async (request, reply) => {
-		const { page = "1", limit = "20" } = request.query;
+	}>(
+		"/",
+		{
+			onRequest: [fastify.authenticate],
+			config: {
+				rateLimit: {
+					max: 50,
+					timeWindow: "1 minute",
+				},
+			},
+		},
+		async (request, reply) => {
+			const { page = "1", limit = "20" } = request.query;
 
-		const result = await userService.list(
-			fastify,
-			parseInt(page),
-			parseInt(limit)
-		);
+			const result = await userService.list(
+				fastify,
+				parseInt(page),
+				parseInt(limit)
+			);
 
-		return result;
-	});
+			return result;
+		}
+	);
 
 	/**
 	 * Get user by ID
@@ -35,7 +47,15 @@ export async function usersRoutes(fastify: FastifyInstance) {
 		Reply: { user: UserDTO } | ErrorResponse;
 	}>(
 		"/:id",
-		{ onRequest: [fastify.authenticate] },
+		{
+			onRequest: [fastify.authenticate],
+			config: {
+				rateLimit: {
+					max: 100,
+					timeWindow: "1 minute",
+				},
+			},
+		},
 		async (request, reply) => {
 			const { id } = request.params;
 
@@ -57,7 +77,15 @@ export async function usersRoutes(fastify: FastifyInstance) {
 		Reply: { user: UserDTO } | ErrorResponse;
 	}>(
 		"/me/status",
-		{ onRequest: [fastify.authenticate] },
+		{
+			onRequest: [fastify.authenticate],
+			config: {
+				rateLimit: {
+					max: 30,
+					timeWindow: "1 minute",
+				},
+			},
+		},
 		async (request, reply) => {
 			try {
 				const workosUserId = getAuthUserId(request);
@@ -89,23 +117,35 @@ export async function usersRoutes(fastify: FastifyInstance) {
 	fastify.patch<{
 		Body: UpdateUserRequest;
 		Reply: { user: UserDTO } | ErrorResponse;
-	}>("/me", { onRequest: [fastify.authenticate] }, async (request, reply) => {
-		try {
-			const workosUserId = getAuthUserId(request);
-			const { display_name, avatar_url } = request.body;
+	}>(
+		"/me",
+		{
+			onRequest: [fastify.authenticate],
+			config: {
+				rateLimit: {
+					max: 10,
+					timeWindow: "1 hour",
+				},
+			},
+		},
+		async (request, reply) => {
+			try {
+				const workosUserId = getAuthUserId(request);
+				const { display_name, avatar_url } = request.body;
 
-			const user = await userService.update(fastify, {
-				workosId: workosUserId,
-				display_name,
-				avatar_url,
-			});
+				const user = await userService.update(fastify, {
+					workosId: workosUserId,
+					display_name,
+					avatar_url,
+				});
 
-			return { user };
-		} catch (err) {
-			fastify.log.error(err);
-			return reply
-				.status(400)
-				.send({ error: "Failed to update profile" });
+				return { user };
+			} catch (err) {
+				fastify.log.error(err);
+				return reply
+					.status(400)
+					.send({ error: "Failed to update profile" });
+			}
 		}
-	});
+	);
 }

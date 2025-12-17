@@ -1,6 +1,5 @@
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
-import rateLimit from "@fastify/rate-limit";
 import "dotenv/config";
 import Fastify, { type FastifyError } from "fastify";
 import { Server } from "socket.io";
@@ -13,10 +12,11 @@ import {
 } from "./observability/index.js";
 
 // Plugins
-import securityHeadersPlugin from "./config/security-headers.plugin.js";
 import { databasePlugin } from "./plugins/database.js";
 import helmetPlugin from "./plugins/helmet.plugin.js";
+import { rateLimitPlugin } from "./plugins/rate-limit.js";
 import { redisPlugin } from "./plugins/redis.js";
+import securityHeadersPlugin from "./plugins/security-headers.plugin.js";
 import { workosAuthPlugin } from "./plugins/workos-auth.js";
 
 // Routes
@@ -166,19 +166,13 @@ export async function build(options?: BuildOptions) {
 		secret: process.env.JWT_SECRET!,
 	});
 
-	await app.register(rateLimit, {
-		max: 100,
-		timeWindow: "1 minute",
-	});
-
+	await app.register(rateLimitPlugin);
 	await app.register(databasePlugin);
 	await app.register(redisPlugin);
 	await app.register(queuePlugin);
 
 	if (mockWorkos) {
-		const mockWorkosPlugin = await import(
-			"./plugins/mocks/mock-workos.js"
-		);
+		const mockWorkosPlugin = await import("./plugins/mocks/mock-workos.js");
 		await app.register(mockWorkosPlugin.default);
 	} else {
 		await app.register(workosAuthPlugin);
