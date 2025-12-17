@@ -54,8 +54,16 @@ COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 # Copiar código compilado (JavaScript, no TypeScript)
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 
+# Copy migrations and config
+COPY --from=builder --chown=nodejs:nodejs /app/migrations ./migrations
+COPY --from=builder --chown=nodejs:nodejs /app/database.json ./database.json
+
 # Copiar package.json (puede ser necesario para algunas dependencias)
 COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
+
+# Copiar entrypoint script
+COPY --from=builder --chown=nodejs:nodejs /app/scripts/docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
 
 # Cambiar a usuario no-root (seguridad)
 USER nodejs
@@ -71,5 +79,4 @@ ENV PORT=3001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Ejecutar con dumb-init (mejor manejo de señales)
-CMD ["dumb-init", "node", "dist/src/index.js"]
+CMD ["./docker-entrypoint.sh"]
